@@ -26,10 +26,21 @@ import org.springframework.web.server.ResponseStatusException;
 public class ImageController {
 
 	private final ImageRepository imageRepository;
+	private final ClassificationRepository classificationRepository;
+	private final ClassificationService classificationService;
+	private final SearchIndexRepository searchIndexRepository;
 	private final Path uploadPath;
 
-	public ImageController(ImageRepository imageRepository, @Value("${app.upload-dir}") String uploadDir) {
+	public ImageController(
+			ImageRepository imageRepository,
+			ClassificationRepository classificationRepository,
+			ClassificationService classificationService,
+			SearchIndexRepository searchIndexRepository,
+			@Value("${app.upload-dir}") String uploadDir) {
 		this.imageRepository = imageRepository;
+		this.classificationRepository = classificationRepository;
+		this.classificationService = classificationService;
+		this.searchIndexRepository = searchIndexRepository;
 		this.uploadPath = Path.of(uploadDir).toAbsolutePath().normalize();
 	}
 
@@ -80,14 +91,62 @@ public class ImageController {
 	}
 
 	@GetMapping
-	public List<ImageRecord> listImages() {
-		return imageRepository.findAll();
+	public List<ImageRecord> listImages(
+			@RequestParam(required = false) String q,
+			@RequestParam(required = false) String garmentType,
+			@RequestParam(required = false) String style,
+			@RequestParam(required = false) String material,
+			@RequestParam(required = false) String color,
+			@RequestParam(required = false) String pattern,
+			@RequestParam(required = false) String season,
+			@RequestParam(required = false) String occasion,
+			@RequestParam(required = false) String consumerProfile,
+			@RequestParam(required = false) String trend,
+			@RequestParam(required = false) String continent,
+			@RequestParam(required = false) String country,
+			@RequestParam(required = false) String city,
+			@RequestParam(required = false) String year,
+			@RequestParam(required = false) String month,
+			@RequestParam(required = false) String designer) {
+		List<String> searchIds = null;
+		if (q != null && !q.isBlank()) {
+			searchIds = searchIndexRepository.searchImageIds(q);
+		}
+		return imageRepository.findByCriteria(new ImageSearchCriteria(
+				searchIds,
+				garmentType,
+				style,
+				material,
+				color,
+				pattern,
+				season,
+				occasion,
+				consumerProfile,
+				trend,
+				continent,
+				country,
+				city,
+				year,
+				month,
+				designer));
 	}
 
 	@GetMapping("/{id}")
-	public ImageRecord getImage(@PathVariable String id) {
-		return imageRepository.findById(id)
+	public ImageDetailResponse getImage(@PathVariable String id) {
+		ImageRecord image = imageRepository.findById(id)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Image not found."));
+		return new ImageDetailResponse(image, classificationRepository.findByImageId(id).orElse(null));
+	}
+
+	@PostMapping("/{id}/classifications/mock")
+	public ClassificationRecord saveMockClassification(@PathVariable String id) {
+		imageRepository.findById(id)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Image not found."));
+		try {
+			return classificationService.saveMockClassification(id);
+		} catch (IllegalArgumentException ex) {
+			throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, ex.getMessage(), ex);
+		}
 	}
 
 	private String extensionFor(String originalFilename, String contentType) {
