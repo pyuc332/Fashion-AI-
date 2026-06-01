@@ -323,17 +323,25 @@ export default function HomePage() {
     }
   }
 
-  async function classifyImage(imageId: string) {
+  async function classifyImage(imageId: string, provider: "mock" | "openai") {
     try {
       setClassifyingId(imageId);
       setError(null);
       setNotice(null);
+      const endpoint =
+        provider === "openai"
+          ? "classifications/openai"
+          : "classifications/mock";
       const response = await fetch(
-        `${apiBaseUrl}/api/images/${imageId}/classifications/mock`,
+        `${apiBaseUrl}/api/images/${imageId}/${endpoint}`,
         { method: "POST" },
       );
       if (!response.ok) {
-        throw new Error(`Classification failed with ${response.status}`);
+        throw new Error(
+          provider === "openai"
+            ? `OpenAI classification failed with ${response.status}. Check backend/.env and OPENAI_API_KEY.`
+            : `Classification failed with ${response.status}`,
+        );
       }
       const classification = (await response.json()) as ClassificationRecord;
       setClassifications((current) => ({
@@ -341,7 +349,11 @@ export default function HomePage() {
         [imageId]: classification,
       }));
       loadFilters();
-      setNotice("Mock classification saved and indexed for search.");
+      setNotice(
+        provider === "openai"
+          ? "OpenAI classification saved and indexed for search."
+          : "Mock classification saved and indexed for search.",
+      );
     } catch (classifyError) {
       setError(
         classifyError instanceof Error
@@ -710,22 +722,49 @@ export default function HomePage() {
 
                     {classification ? (
                       <div className="rounded bg-mist p-3 text-sm">
-                        <p className="font-semibold">Mock AI classification</p>
+                        <p className="font-semibold">
+                          {classification.modelName.startsWith("mock-")
+                            ? "Mock AI classification"
+                            : "OpenAI classification"}
+                        </p>
+                        <p className="mt-1 text-xs font-medium text-clay">
+                          {classification.modelName}
+                        </p>
                         <p className="mt-1 line-clamp-3 text-ink/70">
                           {classification.description}
                         </p>
+                        <button
+                          type="button"
+                          onClick={() => classifyImage(image.id, "openai")}
+                          disabled={classifyingId === image.id}
+                          className="mt-3 w-full rounded bg-clay px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {classifyingId === image.id
+                            ? "Classifying..."
+                            : "Replace with OpenAI classification"}
+                        </button>
                       </div>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => classifyImage(image.id)}
-                        disabled={classifyingId === image.id}
-                        className="w-full rounded border border-ink/15 px-3 py-2 text-sm font-semibold hover:bg-ink hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {classifyingId === image.id
-                          ? "Classifying..."
-                          : "Run mock classification"}
-                      </button>
+                      <div className="grid gap-2">
+                        <button
+                          type="button"
+                          onClick={() => classifyImage(image.id, "openai")}
+                          disabled={classifyingId === image.id}
+                          className="w-full rounded bg-clay px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {classifyingId === image.id
+                            ? "Classifying..."
+                            : "Run OpenAI classification"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => classifyImage(image.id, "mock")}
+                          disabled={classifyingId === image.id}
+                          className="w-full rounded border border-ink/15 px-3 py-2 text-sm font-semibold hover:bg-ink hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Run mock classification
+                        </button>
+                      </div>
                     )}
 
                     <div className="space-y-3 rounded border border-ink/10 p-3">

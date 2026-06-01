@@ -12,18 +12,26 @@ public class ClassificationService {
 	private final ClassificationParser parser;
 	private final ClassificationRepository classificationRepository;
 	private final SearchIndexRepository searchIndexRepository;
+	private final OpenAiVisionClient openAiVisionClient;
 
 	public ClassificationService(
 			ClassificationParser parser,
 			ClassificationRepository classificationRepository,
-			SearchIndexRepository searchIndexRepository) {
+			SearchIndexRepository searchIndexRepository,
+			OpenAiVisionClient openAiVisionClient) {
 		this.parser = parser;
 		this.classificationRepository = classificationRepository;
 		this.searchIndexRepository = searchIndexRepository;
+		this.openAiVisionClient = openAiVisionClient;
 	}
 
 	public ClassificationRecord saveMockClassification(String imageId) {
 		return saveClassification(imageId, mockClassificationJson(), MOCK_MODEL_NAME);
+	}
+
+	public ClassificationRecord saveOpenAiClassification(ImageRecord image, java.nio.file.Path imagePath) {
+		String rawJson = openAiVisionClient.classify(imagePath, image.contentType());
+		return saveClassification(image.id(), rawJson, openAiVisionClient.model());
 	}
 
 	public ClassificationRecord saveClassification(String imageId, String rawJson, String modelName) {

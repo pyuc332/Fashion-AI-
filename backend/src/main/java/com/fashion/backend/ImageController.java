@@ -158,6 +158,23 @@ public class ImageController {
 		}
 	}
 
+	@PostMapping("/{id}/classifications/openai")
+	public ClassificationRecord saveOpenAiClassification(@PathVariable String id) {
+		ImageRecord image = imageRepository.findById(id)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Image not found."));
+		Path imagePath = uploadPath.resolve(image.storedFilename()).normalize();
+		if (!imagePath.startsWith(uploadPath) || !Files.exists(imagePath)) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Stored image file not found.");
+		}
+		try {
+			return classificationService.saveOpenAiClassification(image, imagePath);
+		} catch (ResponseStatusException ex) {
+			throw ex;
+		} catch (IllegalArgumentException ex) {
+			throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, ex.getMessage(), ex);
+		}
+	}
+
 	@PostMapping("/{id}/annotations")
 	public AnnotationRecord saveAnnotation(@PathVariable String id, @org.springframework.web.bind.annotation.RequestBody AnnotationRequest request) {
 		imageRepository.findById(id)
