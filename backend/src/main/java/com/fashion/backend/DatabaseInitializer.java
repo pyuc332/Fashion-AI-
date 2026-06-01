@@ -62,5 +62,17 @@ public class DatabaseInitializer implements CommandLineRunner {
 					manual_annotation_text
 				)
 				""");
+		jdbcTemplate.execute("""
+				CREATE TABLE IF NOT EXISTS annotations (
+					id TEXT PRIMARY KEY,
+					image_id TEXT NOT NULL UNIQUE,
+					tags_json TEXT NOT NULL,
+					notes TEXT,
+					observations TEXT,
+					created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+					updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+					FOREIGN KEY (image_id) REFERENCES images(id)
+				)
+				""");
 	}
 }

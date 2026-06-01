@@ -29,6 +29,8 @@ public class ImageController {
 	private final ClassificationRepository classificationRepository;
 	private final ClassificationService classificationService;
 	private final SearchIndexRepository searchIndexRepository;
+	private final AnnotationRepository annotationRepository;
+	private final AnnotationService annotationService;
 	private final Path uploadPath;
 
 	public ImageController(
@@ -36,11 +38,15 @@ public class ImageController {
 			ClassificationRepository classificationRepository,
 			ClassificationService classificationService,
 			SearchIndexRepository searchIndexRepository,
+			AnnotationRepository annotationRepository,
+			AnnotationService annotationService,
 			@Value("${app.upload-dir}") String uploadDir) {
 		this.imageRepository = imageRepository;
 		this.classificationRepository = classificationRepository;
 		this.classificationService = classificationService;
 		this.searchIndexRepository = searchIndexRepository;
+		this.annotationRepository = annotationRepository;
+		this.annotationService = annotationService;
 		this.uploadPath = Path.of(uploadDir).toAbsolutePath().normalize();
 	}
 
@@ -135,7 +141,10 @@ public class ImageController {
 	public ImageDetailResponse getImage(@PathVariable String id) {
 		ImageRecord image = imageRepository.findById(id)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Image not found."));
-		return new ImageDetailResponse(image, classificationRepository.findByImageId(id).orElse(null));
+		return new ImageDetailResponse(
+				image,
+				classificationRepository.findByImageId(id).orElse(null),
+				annotationRepository.findByImageId(id).orElse(null));
 	}
 
 	@PostMapping("/{id}/classifications/mock")
@@ -147,6 +156,13 @@ public class ImageController {
 		} catch (IllegalArgumentException ex) {
 			throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, ex.getMessage(), ex);
 		}
+	}
+
+	@PostMapping("/{id}/annotations")
+	public AnnotationRecord saveAnnotation(@PathVariable String id, @org.springframework.web.bind.annotation.RequestBody AnnotationRequest request) {
+		imageRepository.findById(id)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Image not found."));
+		return annotationService.saveAnnotation(id, request);
 	}
 
 	private String extensionFor(String originalFilename, String contentType) {

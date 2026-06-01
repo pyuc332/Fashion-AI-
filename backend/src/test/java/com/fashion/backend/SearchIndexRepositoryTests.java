@@ -25,14 +25,7 @@ class SearchIndexRepositoryTests {
 		dataSource.setDriverClassName("org.sqlite.JDBC");
 		dataSource.setUrl("jdbc:sqlite:" + databasePath);
 		JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
-		jdbcTemplate.execute("""
-				CREATE VIRTUAL TABLE image_search_fts USING fts5(
-					image_id UNINDEXED,
-					description,
-					ai_metadata_text,
-					manual_annotation_text
-				)
-				""");
+		new DatabaseInitializer(jdbcTemplate).run();
 		repository = new SearchIndexRepository(jdbcTemplate);
 	}
 
@@ -78,6 +71,32 @@ class SearchIndexRepositoryTests {
 
 		assertThat(repository.searchImageIds("embroidered")).isEmpty();
 		assertThat(repository.searchImageIds("leather jacket")).containsExactly("image-1");
+	}
+
+	@Test
+	void indexesManualAnnotationsWithoutDroppingClassificationText() {
+		ClassificationRecord classification = classification(
+				"image-1",
+				"An embroidered linen dress.",
+				"[\"dress\"]",
+				"[\"cream\"]",
+				"[\"artisan\"]");
+		repository.updateClassification(classification);
+		repository.refreshImage(
+				"image-1",
+				classification,
+				new AnnotationRecord(
+						"annotation-1",
+						"image-1",
+						"[\"capsule reference\",\"neckline detail\"]",
+						"Interesting trim for a summer capsule.",
+						"Use as a neckline detail reference.",
+						null,
+						null));
+
+		assertThat(repository.searchImageIds("embroidered")).containsExactly("image-1");
+		assertThat(repository.searchImageIds("summer capsule")).containsExactly("image-1");
+		assertThat(repository.searchImageIds("neckline detail")).containsExactly("image-1");
 	}
 
 	private ClassificationRecord classification(

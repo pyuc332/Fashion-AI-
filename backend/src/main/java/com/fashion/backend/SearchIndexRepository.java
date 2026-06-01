@@ -16,7 +16,20 @@ public class SearchIndexRepository {
 	}
 
 	public void updateClassification(ClassificationRecord classification) {
-		jdbcTemplate.update("DELETE FROM image_search_fts WHERE image_id = ?", classification.imageId());
+		String manualAnnotationText = jdbcTemplate.query("""
+				SELECT tags_json || ' ' || coalesce(notes, '') || ' ' || coalesce(observations, '')
+				FROM annotations
+				WHERE image_id = ?
+				""", rs -> rs.next() ? rs.getString(1) : "", classification.imageId());
+		refreshImage(classification.imageId(), classification, manualAnnotationText);
+	}
+
+	public void refreshImage(String imageId, ClassificationRecord classification, AnnotationRecord annotation) {
+		refreshImage(imageId, classification, flattenAnnotation(annotation));
+	}
+
+	private void refreshImage(String imageId, ClassificationRecord classification, String manualAnnotationText) {
+		jdbcTemplate.update("DELETE FROM image_search_fts WHERE image_id = ?", imageId);
 		jdbcTemplate.update("""
 				INSERT INTO image_search_fts (
 					image_id,
@@ -25,10 +38,10 @@ public class SearchIndexRepository {
 					manual_annotation_text
 				) VALUES (?, ?, ?, ?)
 				""",
-				classification.imageId(),
-				classification.description(),
-				flattenMetadata(classification),
-				"");
+				imageId,
+				classification == null ? "" : classification.description(),
+				classification == null ? "" : flattenMetadata(classification),
+				manualAnnotationText == null ? "" : manualAnnotationText);
 	}
 
 	public List<String> searchImageIds(String query) {
@@ -57,6 +70,16 @@ public class SearchIndexRepository {
 				classification.trendNotesJson(),
 				classification.locationContextJson(),
 				nullToBlank(classification.confidenceNotes()));
+	}
+
+	private String flattenAnnotation(AnnotationRecord annotation) {
+		if (annotation == null) {
+			return "";
+		}
+		return String.join(" ",
+				annotation.tagsJson(),
+				nullToBlank(annotation.notes()),
+				nullToBlank(annotation.observations()));
 	}
 
 	private String normalizeQuery(String query) {
