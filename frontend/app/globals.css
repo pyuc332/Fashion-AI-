@@ -21,3 +21,9 @@ textarea,
 select {
   font: inherit;
 }
+
+nextjs-portal,
+[data-nextjs-toast],
+[data-next-badge-root] {
+  display: none !important;
+}

@@ -26,7 +26,7 @@ plan.md    Stepwise implementation and validation plan
 
 - Java 17+
 - Node.js 24+ and npm 11+
-- An OpenAI API key with available quota for real classification
+- An OpenAI API key for real classification
 
 ## Backend Setup
 
@@ -85,6 +85,26 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
 4. Search generated descriptions, AI metadata, and manual annotations.
 5. Filter dynamically by stored metadata such as garment type, material, color, country, year, and designer.
 6. Add manual tags, notes, and observations separately from AI metadata.
+
+## Demo Screenshots
+
+These screenshots use the mock classifier so the demo remains reproducible without depending on live model access. The mock path intentionally exercises the same parser, validation, persistence, FTS5 indexing, filters, and frontend rendering flow as the OpenAI classifier.
+
+### Upload And Library View
+
+![Fashion AI Library upload and filtered image library](docs/screenshots/01-summer-library-overview.png)
+
+### Search Manual Annotation Text
+
+![Search results for a manual summer annotation](docs/screenshots/02-summer-search-annotation.png)
+
+### Dynamic Metadata Filters
+
+![Dynamic material filter with mock classification metadata](docs/screenshots/03-summer-dynamic-filter.png)
+
+### Classification And Annotation Workflow
+
+![Full workflow showing mock classification and designer annotation](docs/screenshots/04-summer-full-workflow.png)
 
 ## API Summary
 
@@ -182,7 +202,7 @@ Product tradeoffs:
 ## Known Limitations
 
 - The current UI is intentionally compact and not fully polished for mobile-heavy usage.
-- OpenAI classification depends on API key validity, model access, and available quota.
+- OpenAI classification depends on API key validity and model access.
 - The local filesystem upload strategy is not production durable.
 - There is no authentication or multi-user separation.
 - Search ranking is basic FTS5 BM25 without semantic embeddings.
@@ -193,7 +213,7 @@ Product tradeoffs:
 
 - Add a small labeled evaluation set and compare model output against expected garment attributes.
 - Add frontend component or Playwright workflow tests.
-- Add retry and clearer user-facing states for OpenAI quota/rate-limit errors.
+- Add retry and clearer user-facing states for OpenAI API errors.
 - Move images to S3/R2 and store object keys instead of local paths.
 - Add auth and workspace/project separation.
 - Add embedding search for more flexible inspiration discovery.

@@ -114,6 +114,28 @@ const emptySearchFilters: SearchFilters = {
   designer: "",
 };
 
+function filtersFromUrl(): SearchFilters {
+  if (typeof window === "undefined") {
+    return emptySearchFilters;
+  }
+  const params = new URLSearchParams(window.location.search);
+  return {
+    q: params.get("q") ?? "",
+    garmentType: params.get("garmentType") ?? "",
+    style: params.get("style") ?? "",
+    material: params.get("material") ?? "",
+    color: params.get("color") ?? "",
+    pattern: params.get("pattern") ?? "",
+    season: params.get("season") ?? "",
+    occasion: params.get("occasion") ?? "",
+    country: params.get("country") ?? "",
+    city: params.get("city") ?? "",
+    year: params.get("year") ?? "",
+    month: params.get("month") ?? "",
+    designer: params.get("designer") ?? "",
+  };
+}
+
 const emptyAnnotationDraft: AnnotationDraft = {
   tags: "",
   notes: "",
@@ -263,7 +285,10 @@ export default function HomePage() {
   }
 
   useEffect(() => {
-    loadImages();
+    const initialFilters = filtersFromUrl();
+    setFilters(initialFilters);
+    setAppliedFilters(initialFilters);
+    loadImages(initialFilters);
     loadFilters();
   }, []);
 
